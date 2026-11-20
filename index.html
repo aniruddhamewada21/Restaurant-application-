@@ -1,0 +1,262 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restaurant Table Booking</title>
+    <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+    body {
+      margin: 0;
+      padding: 0;
+      background: #eef1f5;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    /* Full-screen on Mobile, Clean Centered Card on PC */
+    .phone-frame {
+      width: 100%;
+      max-width: 540px;
+      min-height: 100vh;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+    @media (min-width: 600px) {
+      body {
+        padding: 24px 16px;
+        align-items: center;
+      }
+      .phone-frame {
+        min-height: auto;
+        border-radius: 14px;
+        overflow: hidden;
+      }
+    }
+    .app-bar {
+      background: #d94e1f;
+      color: #fff;
+      padding: 16px 20px;
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .container { padding: 24px 20px; flex: 1; }
+    h2 { margin-top: 0; color: #222; font-size: 20px; }
+    p.subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 5px; }
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 14px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+      background: #fff;
+    }
+    button {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .btn-primary { background: #d94e1f; color: #fff; }
+    .btn-outline { background: transparent; border: 1.5px solid #d94e1f; color: #d94e1f; }
+    .btn-logout {
+      width: auto;
+      padding: 6px 12px;
+      font-size: 13px;
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      margin: 0;
+    }
+    .status-msg {
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .success { background: #d4edda; color: #155724; display: block; }
+    .error { background: #f8d7da; color: #721c24; display: block; }
+    .hidden { display: none; }
+  </style>
+
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="app-bar">
+    <span>DineEase Table Booking</span>
+    <button id="btnLogout" class="btn-logout hidden" onclick="logoutUser()">Logout</button>
+  </div>
+
+  <!-- PAGE 1: LOGIN / SIGN UP -->
+  <div id="page1" class="container">
+    <h2>Customer Login / Sign Up</h2>
+    <p class="subtitle">Sign in or create an account to book your restaurant table.</p>
+    <div id="authStatus" class="status-msg"></div>
+
+    <label>Email Address</label>
+    <input type="email" id="loginEmail" placeholder="Enter your email" />
+
+    <label>Password</label>
+    <input type="password" id="loginPassword" placeholder="Minimum 6 characters" />
+
+    <button class="btn-primary" onclick="loginUser()">Login</button>
+    <button class="btn-outline" onclick="registerUser()">Create New Account (Sign Up)</button>
+  </div>
+
+  <!-- PAGE 2: CUSTOMER REGISTRATION & TABLE BOOKING FORM -->
+  <div id="page2" class="container hidden">
+    <h2>Customer Details &amp; Table Booking</h2>
+    <p class="subtitle">Complete your profile to confirm your table reservation.</p>
+    <div id="formStatus" class="status-msg"></div>
+
+    <label>Full Name *</label>
+    <input type="text" id="custName" placeholder="e.g. Rahul Sharma" />
+
+    <label>Phone Number *</label>
+    <input type="tel" id="custPhone" maxlength="10" placeholder="10-digit mobile number" />
+
+    <label>Date of Birth (DOB) *</label>
+    <input type="date" id="custDob" />
+
+    <label>Email Address *</label>
+    <input type="email" id="custEmail" placeholder="Email address" readonly />
+
+    <label>Full Address *</label>
+    <textarea id="custAddress" rows="2" placeholder="House/Flat No, Area, City"></textarea>
+
+    <label>Number of Guests</label>
+    <select id="custGuests">
+      <option value="2 Guests">2 Guests</option>
+      <option value="4 Guests" selected>4 Guests</option>
+      <option value="6 Guests">6 Guests</option>
+      <option value="8+ Guests">8+ Guests</option>
+    </select>
+
+    <label>Preferred Booking Date &amp; Time</label>
+    <input type="datetime-local" id="custBookingTime" />
+
+    <button class="btn-primary" onclick="saveCustomerData()">Save Details &amp; Book Table</button>
+  </div>
+</div>
+
+<!-- Firebase Compat SDKs (Works directly from local HTML file without server) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
+<script>
+  // PASTE YOUR FIREBASE CONFIG HERE
+const firebaseConfig = {
+  apiKey: "AIzaSyB1p_wXR7_wC3jzXGpe4hN-iOH_yt35iCE",
+  authDomain: "restaurant-c9bb6.firebaseapp.com",
+  databaseURL: "https://restaurant-c9bb6-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "restaurant-c9bb6",
+  storageBucket: "restaurant-c9bb6.firebasestorage.app",
+  messagingSenderId: "413966768776",
+  appId: "1:413966768776:web:a8d9e9da9be3dd138f5d3d",
+  measurementId: "G-K9G93C6YYM"
+};  
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  function showMessage(elementId, text, isError) {
+    const el = document.getElementById(elementId);
+    el.textContent = text;
+    el.className = "status-msg " + (isError ? "error" : "success");
+  }
+
+  // Automatically switch between Page 1 and Page 2 based on login state
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      document.getElementById("page1").classList.add("hidden");
+      document.getElementById("page2").classList.remove("hidden");
+      document.getElementById("btnLogout").classList.remove("hidden");
+      document.getElementById("custEmail").value = user.email;
+    } else {
+      document.getElementById("page1").classList.remove("hidden");
+      document.getElementById("page2").classList.add("hidden");
+      document.getElementById("btnLogout").classList.add("hidden");
+    }
+  });
+
+  function registerUser() {
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+    if (!email || password.length < 6) {
+      showMessage("authStatus", "Enter a valid email and at least a 6-character password.", true);
+      return;
+    }
+    auth.createUserWithEmailAndPassword(email, password)
+      .catch((error) => showMessage("authStatus", error.message, true));
+  }
+
+  function loginUser() {
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+    if (!email || !password) {
+      showMessage("authStatus", "Please enter both email and password.", true);
+      return;
+    }
+    auth.signInWithEmailAndPassword(email, password)
+      .catch((error) => showMessage("authStatus", error.message, true));
+  }
+
+  function logoutUser() {
+    auth.signOut();
+  }
+
+  function saveCustomerData() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const name = document.getElementById("custName").value.trim();
+    const phone = document.getElementById("custPhone").value.trim();
+    const dob = document.getElementById("custDob").value;
+    const email = document.getElementById("custEmail").value.trim();
+    const address = document.getElementById("custAddress").value.trim();
+    const guests = document.getElementById("custGuests").value;
+    const bookingTime = document.getElementById("custBookingTime").value;
+
+    if (!name || !phone || !dob || !email || !address) {
+      showMessage("formStatus", "Please fill in all required (*) customer fields.", true);
+      return;
+    }
+
+    db.ref("customers/" + user.uid).set({
+      uid: user.uid,
+      name: name,
+      phoneNo: phone,
+      dob: dob,
+      email: email,
+      address: address,
+      guests: guests,
+      bookingDateTime: bookingTime || "Not specified",
+      updatedAt: new Date().toISOString()
+    })
+    .then(() => {
+      showMessage("formStatus", "Success! Customer details & table booking saved to Firebase.", false);
+    })
+    .catch((error) => {
+      showMessage("formStatus", "Database Error: " + error.message, true);
+    });
+  }
+</script>
+
+</body>
+</html>
